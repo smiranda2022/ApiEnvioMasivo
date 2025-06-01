@@ -6,13 +6,13 @@ EXPOSE 80
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
 COPY . .
-RUN dotnet restore "TuProyecto.csproj"
-RUN dotnet build "TuProyecto.csproj" -c Release -o /app/build
+RUN dotnet restore "ApiEnvioMasivo.csproj"
+RUN dotnet build "ApiEnvioMasivo.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "TuProyecto.csproj" -c Release -o /app/publish
+RUN dotnet publish "ApiEnvioMasivo.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "TuProyecto.dll"]
+ENTRYPOINT ["dotnet", "ApiEnvioMasivo.dll"]
