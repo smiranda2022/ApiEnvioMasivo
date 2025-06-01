@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+ApiEnvioMasivo.csproj.user
+*.db
+EnvioYCLick.jpg EvidenciaPosgmant.jpg ImagenDeEjemplo.jpg
+*.png
+plantilla_envio_masivo.xlsx
+enviar-excel.html formulario-envio-excel.html
+.env
+appsettings.Development.json

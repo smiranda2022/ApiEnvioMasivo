@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enviar Correos Masivos desde Excel</title>
+</head>
+<body>
+    <h2>Formulario de carga de Excel</h2>
+    <form action="https://localhost:5001/api/suscripcion/masivo-excel" method="post" enctype="multipart/form-data">
+        <label for="archivo">Seleccionar archivo Excel (.xlsx):</label><br><br>
+        <input type="file" name="archivo" id="archivo" accept=".xlsx" required /><br><br>
+        <button type="submit">Enviar Correos</button>
+    </form>
+</body>
+</html>
