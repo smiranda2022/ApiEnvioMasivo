@@ -80,7 +80,7 @@ namespace ApiEnvioMasivo.Services
 
                     // Tracking Pixel
                     var baseUrl = _configuration["TrackingBaseUrl"];
-                    string pixel = $"<img src='{baseUrl}/api/tracking/open?correoId={enviado.Id}' width='1' height='1' style='display:none;' />";
+                    string pixel = $"<img src='{baseUrl}/api/tracking/open?DestinatarioId={enviado.Id}' width='1' height='1' style='display:none;' />";
                     var htmlFinal = paso.HtmlContenido.Replace("{{nombre}}", d.Nombre) + pixel;
 
                     // Ahora usar htmlFinal para enviarlo
