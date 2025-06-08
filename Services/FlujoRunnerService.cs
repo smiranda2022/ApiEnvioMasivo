@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using RestSharp;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 
 namespace ApiEnvioMasivo.Services
@@ -13,10 +14,12 @@ namespace ApiEnvioMasivo.Services
     public class FlujoRunnerService
     {
         private readonly AppDbContext _db;
+        private readonly IConfiguration _configuration;
 
-        public FlujoRunnerService(AppDbContext db)
+        public FlujoRunnerService(AppDbContext db, IConfiguration configuration)
         {
             _db = db;
+            _configuration = configuration;
         }
 
         public async Task EjecutarFlujosAsync()
@@ -76,7 +79,8 @@ namespace ApiEnvioMasivo.Services
                     await _db.SaveChangesAsync(); // Acá se genera el ID
 
                     // Tracking Pixel
-                    var pixel = $"<img src='https://tuservidor/api/tracking/open?correoId={enviado.Id}' width='1' height='1' style='display:none;' />";
+                    var baseUrl = _configuration["TrackingBaseUrl"];
+                    string pixel = $"<img src='{baseUrl}/api/tracking/open?correoId={enviado.Id}' width='1' height='1' style='display:none;' />";
                     var htmlFinal = paso.HtmlContenido.Replace("{{nombre}}", d.Nombre) + pixel;
 
                     // Ahora usar htmlFinal para enviarlo
