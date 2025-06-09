@@ -3,6 +3,7 @@ using ApiEnvioMasivo.Data;
 using System.Threading.Tasks;
 using System.IO;
 using System;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiEnvioMasivo.Controllers
 {
@@ -20,7 +21,8 @@ namespace ApiEnvioMasivo.Controllers
         [HttpGet("open")]
         public async Task<IActionResult> RegistrarApertura([FromQuery] int correoId)
         {
-            var registro = await _db.CorreosEnviados.FindAsync(correoId);
+            //var registro = await _db.CorreosEnviados.FindAsync(correoId);
+            var registro = await _db.CorreosEnviados.FirstOrDefaultAsync(x => x.DestinatarioId == correoId);
             if (registro != null && !registro.Abierto)
             {
                 registro.Abierto = true;
