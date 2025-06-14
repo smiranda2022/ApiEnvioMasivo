@@ -22,6 +22,76 @@ namespace ApiEnvioMasivo.Services
             _configuration = configuration;
         }
 
+        //public async Task EjecutarFlujosAsync()
+        //{
+        //    var ahora = DateTime.UtcNow;
+
+        //    var destinatarios = await _db.Destinatarios
+        //        .Include(d => d.Flujo)
+        //        .ThenInclude(f => f.Pasos)
+        //        .ToListAsync();
+
+        //    foreach (var d in destinatarios)
+        //    {
+        //        if (d.Flujo == null || !d.Flujo.Activo)
+        //            continue;
+
+        //        foreach (var paso in d.Flujo.Pasos
+        //            .Where(p => p.Activo)
+        //            .OrderBy(p => p.Orden))
+        //        {
+        //            // Validar si ya fue enviado
+        //            bool yaEnviado = await _db.CorreosEnviados
+        //                .AnyAsync(c => c.DestinatarioId == d.Id && c.FlujoPasoId == paso.Id);
+
+        //            if (yaEnviado)
+        //                continue;
+
+        //            // Verificar si ya pasó el tiempo de espera desde la fecha de inicio
+        //            if (d.FechaInicioFlujo + paso.Espera > ahora)
+        //                continue;
+
+        //            // Validar condición (ejemplo básico)
+        //            if (paso.CondicionTipo == "no_abierto")
+        //            {
+        //                var abierto = await _db.CorreosEnviados
+        //                    .Where(c => c.DestinatarioId == d.Id && c.FlujoPasoId == paso.Id - 1)
+        //                    .Select(c => c.Abierto)
+        //                    .FirstOrDefaultAsync();
+
+        //                if (abierto) continue;
+        //            }
+
+        //            // TODO: Llamar a tu método de envío aquí
+        //            await EnviarCorreoAsync(d.Email, d.Nombre, paso.Asunto, paso.HtmlContenido);
+
+
+
+        //            var enviado = new CorreoEnviado
+        //            {
+        //                DestinatarioId = d.Id,
+        //                FlujoPasoId = paso.Id,
+        //                FechaEnvio = ahora,
+        //                Abierto = false
+        //            };
+
+        //            _db.CorreosEnviados.Add(enviado);
+        //            await _db.SaveChangesAsync(); // Acá se genera el ID
+
+        //            // Tracking Pixel
+        //            var baseUrl = _configuration["TrackingBaseUrl"];
+        //            string pixel = $"<img src='{baseUrl}/api/tracking/open?correoId={enviado.Id}' width='1' height='1' style='display:none;' />";
+        //            var htmlFinal = paso.HtmlContenido.Replace("{{nombre}}", d.Nombre) + pixel;
+
+        //            // Ahora usar htmlFinal para enviarlo
+        //            //await EnviarCorreo(d.Email, paso.Asunto, htmlFinal);
+        //            var resultado = await EnviarCorreoHtml(d.Email, paso.Asunto, htmlFinal);
+        //            ///var resultado = await _correoService.EnviarCorreoHtml(d.Email, paso.Asunto, htmlFinal);
+
+        //        }
+        //    }
+        //}
+
         public async Task EjecutarFlujosAsync()
         {
             var ahora = DateTime.UtcNow;
@@ -36,36 +106,43 @@ namespace ApiEnvioMasivo.Services
                 if (d.Flujo == null || !d.Flujo.Activo)
                     continue;
 
-                foreach (var paso in d.Flujo.Pasos
+                var pasos = d.Flujo.Pasos
                     .Where(p => p.Activo)
-                    .OrderBy(p => p.Orden))
+                    .OrderBy(p => p.Orden)
+                    .ToList();
+
+                for (int i = 0; i < pasos.Count; i++)
                 {
-                    // Validar si ya fue enviado
+                    var paso = pasos[i];
+
                     bool yaEnviado = await _db.CorreosEnviados
                         .AnyAsync(c => c.DestinatarioId == d.Id && c.FlujoPasoId == paso.Id);
-
                     if (yaEnviado)
                         continue;
 
-                    // Verificar si ya pasó el tiempo de espera desde la fecha de inicio
-                    if (d.FechaInicioFlujo + paso.Espera > ahora)
-                        continue;
-
-                    // Validar condición (ejemplo básico)
-                    if (paso.CondicionTipo == "no_abierto")
+                    if (i > 0)
                     {
-                        var abierto = await _db.CorreosEnviados
-                            .Where(c => c.DestinatarioId == d.Id && c.FlujoPasoId == paso.Id - 1)
-                            .Select(c => c.Abierto)
+                        var pasoAnterior = pasos[i - 1];
+                        var envioAnterior = await _db.CorreosEnviados
+                            .Where(c => c.DestinatarioId == d.Id && c.FlujoPasoId == pasoAnterior.Id)
                             .FirstOrDefaultAsync();
 
-                        if (abierto) continue;
+                        if (envioAnterior == null)
+                            break;
+
+                        if (envioAnterior.FechaEnvio + paso.Espera > ahora)
+                            break;
+
+                        if (paso.CondicionTipo == "no_abierto" && envioAnterior.Abierto == true)
+                            break;
+                    }
+                    else
+                    {
+                        if (d.FechaInicioFlujo + paso.Espera > ahora)
+                            break;
                     }
 
-                    // TODO: Llamar a tu método de envío aquí
                     await EnviarCorreoAsync(d.Email, d.Nombre, paso.Asunto, paso.HtmlContenido);
-
-
 
                     var enviado = new CorreoEnviado
                     {
@@ -76,18 +153,15 @@ namespace ApiEnvioMasivo.Services
                     };
 
                     _db.CorreosEnviados.Add(enviado);
-                    await _db.SaveChangesAsync(); // Acá se genera el ID
+                    await _db.SaveChangesAsync();
 
-                    // Tracking Pixel
                     var baseUrl = _configuration["TrackingBaseUrl"];
                     string pixel = $"<img src='{baseUrl}/api/tracking/open?correoId={enviado.Id}' width='1' height='1' style='display:none;' />";
                     var htmlFinal = paso.HtmlContenido.Replace("{{nombre}}", d.Nombre) + pixel;
 
-                    // Ahora usar htmlFinal para enviarlo
-                    //await EnviarCorreo(d.Email, paso.Asunto, htmlFinal);
                     var resultado = await EnviarCorreoHtml(d.Email, paso.Asunto, htmlFinal);
-                    ///var resultado = await _correoService.EnviarCorreoHtml(d.Email, paso.Asunto, htmlFinal);
 
+                    break; // Detener después de ejecutar un paso
                 }
             }
         }

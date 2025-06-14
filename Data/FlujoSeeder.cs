@@ -37,6 +37,7 @@ namespace ApiEnvioMasivo.Seed
                         Asunto = "¿Aún no conociste nuestros beneficios?",
                         HtmlContenido = "<p>Pasaron 3 días, {{nombre}}. ¿Querés ver lo que tenemos para vos?</p>",
                        // DiasDespuesDelInicio = 0,// cambiar cuando sea necesario
+                       //Espera = TimeSpan.FromDays(3), ver cuando sea necesario.
                         Espera = TimeSpan.FromMinutes(5),
                         CondicionTipo = "no_abierto",
                         Activo = true
