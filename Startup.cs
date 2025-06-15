@@ -58,6 +58,8 @@ namespace ApiEnvioMasivo
                 Authorization = new[] { new AllowAllDashboardAuthorizationFilter() }
             });
 
+       
+
             app.UseDeveloperExceptionPage(); // habilita trazas detalladas
 
             if (env.IsDevelopment())

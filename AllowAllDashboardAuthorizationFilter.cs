@@ -1,10 +1,11 @@
-﻿using Hangfire.Dashboard;
+﻿using Hangfire.Annotations;
+using Hangfire.Dashboard;
 
-namespace ApiEnvioMasivo.Filters   // ← este namespace debe existir
+namespace ApiEnvioMasivo.Filters
 {
     public class AllowAllDashboardAuthorizationFilter : IDashboardAuthorizationFilter
     {
-        public bool Authorize(DashboardContext context)
+        public bool Authorize([NotNull] DashboardContext context)
         {
             return true;
         }
