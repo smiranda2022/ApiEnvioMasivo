@@ -1,12 +1,12 @@
 ﻿using Hangfire.Dashboard;
 
-public class AllowAllDashboardAuthorizationFilter : IDashboardAuthorizationFilter
+namespace ApiEnvioMasivo.Filters   // ← este namespace debe existir
 {
-    public bool Authorize(DashboardContext context)
+    public class AllowAllDashboardAuthorizationFilter : IDashboardAuthorizationFilter
     {
-        // ⚠️ En producción real usá autenticación.
-        return true;   // Permite el acceso a cualquiera.
+        public bool Authorize(DashboardContext context)
+        {
+            return true;
+        }
     }
 }
-
-

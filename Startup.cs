@@ -9,6 +9,7 @@ using ApiEnvioMasivo.Data;
 using ApiEnvioMasivo.Seed;
 using ApiEnvioMasivo.Services;
 using Hangfire;
+using ApiEnvioMasivo.Filters;
 
 
 namespace ApiEnvioMasivo
