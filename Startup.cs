@@ -53,13 +53,6 @@ namespace ApiEnvioMasivo
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseHangfireDashboard("/hangfire", new DashboardOptions
-            {
-                Authorization = new[] { new AllowAllDashboardAuthorizationFilter() }
-            });
-
-       
-
             app.UseDeveloperExceptionPage(); // habilita trazas detalladas
 
             if (env.IsDevelopment())
@@ -67,7 +60,7 @@ namespace ApiEnvioMasivo
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection(); // 👈 AGREGAR ESTO
+            app.UseHttpsRedirection(); // Redirección a HTTPS
 
             app.UseRouting();
 
@@ -82,6 +75,12 @@ namespace ApiEnvioMasivo
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+
+                // 👇 Mapeo del dashboard Hangfire para que funcione en Render
+                endpoints.MapHangfireDashboard("/hangfire", new DashboardOptions
+                {
+                    Authorization = new[] { new AllowAllDashboardAuthorizationFilter() }
+                });
             });
 
             using (var scope = app.ApplicationServices.CreateScope())
@@ -89,8 +88,7 @@ namespace ApiEnvioMasivo
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 FlujoSeeder.CargarFlujoDeEjemplo(db);
             }
-
-
         }
+
     }
 }
