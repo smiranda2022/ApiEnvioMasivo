@@ -52,7 +52,10 @@ namespace ApiEnvioMasivo
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseHangfireDashboard();
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                Authorization = new[] { new AllowAllDashboardAuthorizationFilter() }
+            });
 
             app.UseDeveloperExceptionPage(); // habilita trazas detalladas
 
