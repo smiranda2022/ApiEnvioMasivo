@@ -46,6 +46,7 @@ namespace ApiEnvioMasivo
             services.AddHangfire(cfg =>
                 cfg.UseSqlServerStorage(Configuration.GetConnectionString("DefaultConnection")));
             services.AddHangfireServer();
+            // Esto es una prueba para disparar un deploy automático
 
         }
 
