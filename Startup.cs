@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using ApiEnvioMasivo.Data;
 using ApiEnvioMasivo.Seed;
 using ApiEnvioMasivo.Services;
+using Hangfire;
 
 
 namespace ApiEnvioMasivo
@@ -40,10 +41,18 @@ namespace ApiEnvioMasivo
                     Version = "v1"
                 });
             });
+
+            // 1️⃣ Hangfire
+            services.AddHangfire(cfg =>
+                cfg.UseSqlServerStorage(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddHangfireServer();
+
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseHangfireDashboard();
+
             app.UseDeveloperExceptionPage(); // habilita trazas detalladas
 
             if (env.IsDevelopment())
