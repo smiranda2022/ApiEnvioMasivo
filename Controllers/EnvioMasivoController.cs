@@ -19,10 +19,12 @@ namespace ApiEnvioMasivo.Controllers
     [Route("api/suscripcion")]
     public class EnvioMasivoController : ControllerBase
     {
+        private readonly AppDbContext _db;
+
         [HttpPost]
         public async Task<IActionResult> EnviarCorreoIndividual([FromBody] SuscripcionRequest request)
         {
-            var resultado = await EnviarCorreo(request.Email, request.Nombre);
+            var resultado = await EnviarCorreo(request.Email, request.Nombre,request.Id,1000);//Prueba pasoID
            
             return Ok(resultado);
         }
@@ -39,7 +41,7 @@ namespace ApiEnvioMasivo.Controllers
             var resultados = new List<object>();
             foreach (var d in destinatariosFiltrados)
             {
-                var resultado = await EnviarCorreo(d.Email, d.Nombre);
+                var resultado = await EnviarCorreo(d.Email, d.Nombre,1000,1000);//solo para pruebas, hay que modificarlo
                 resultados.Add(resultado);
             }
             return Ok(new
@@ -72,7 +74,7 @@ namespace ApiEnvioMasivo.Controllers
                 if (string.IsNullOrWhiteSpace(d.Email) || string.IsNullOrWhiteSpace(d.Nombre))
                     continue;
 
-               var resultado = await EnviarCorreo(d.Email, d.Nombre);
+               var resultado = await EnviarCorreo(d.Email, d.Nombre, d.Id,100);
                 //var resultado =  await EnviarCorreoHtml(d.Email, Asunto, Html);
 
 
@@ -204,7 +206,7 @@ namespace ApiEnvioMasivo.Controllers
             var resultados = new List<object>();
             foreach (var d in destinatariosFiltrados)
             {
-                var resultado = await EnviarCorreo(d.Email, d.Nombre);
+                var resultado = await EnviarCorreo(d.Email, d.Nombre, 1000,1000);//solo para prueba
                 resultados.Add(resultado);
             }
 
@@ -264,8 +266,19 @@ namespace ApiEnvioMasivo.Controllers
 
         //}
 
-        private async Task<object> EnviarCorreo(string email, string nombre)
+        private async Task<object> EnviarCorreo(string email, string nombre, int DestinatarioId, int pasoId)
         {
+            
+            var enviado = new CorreoEnviado
+            {
+                DestinatarioId = DestinatarioId,
+                FlujoPasoId = pasoId,
+                FechaEnvio = DateTime.UtcNow,
+                Abierto = false
+            };
+            _db.CorreosEnviados.Add(enviado);
+            await _db.SaveChangesAsync();     // ← aquí debería persistir
+
             // Validación simple de entrada
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(nombre))
             {
