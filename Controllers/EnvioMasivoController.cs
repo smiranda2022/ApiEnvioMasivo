@@ -21,6 +21,11 @@ namespace ApiEnvioMasivo.Controllers
     {
         private readonly AppDbContext _db;
 
+        public EnvioMasivoController(AppDbContext db)
+        {
+            _db = db;
+        }
+
         [HttpPost]
         public async Task<IActionResult> EnviarCorreoIndividual([FromBody] SuscripcionRequest request)
         {
