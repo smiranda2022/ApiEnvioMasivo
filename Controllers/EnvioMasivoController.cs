@@ -12,6 +12,7 @@ using System;
 using ApiEnvioMasivo.Data;
 using Microsoft.EntityFrameworkCore;
 using ApiEnvioMasivo.Services;
+using Newtonsoft.Json;
 
 namespace ApiEnvioMasivo.Controllers
 {
@@ -20,16 +21,22 @@ namespace ApiEnvioMasivo.Controllers
     public class EnvioMasivoController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly LogService _log;
+        private readonly IEmailService _emailService;
+        private readonly IFlujoService _flujoService;
 
-        public EnvioMasivoController(AppDbContext db)
+        public EnvioMasivoController(AppDbContext db, LogService log, IEmailService emailService,IFlujoService flujoService)
         {
             _db = db;
+            _log = log;
+            _emailService = emailService;
+            _flujoService = flujoService;
         }
 
         [HttpPost]
         public async Task<IActionResult> EnviarCorreoIndividual([FromBody] SuscripcionRequest request)
         {
-            var resultado = await EnviarCorreo(request.Email, request.Nombre,request.Id,1000);//Prueba pasoID
+            var resultado = await EnviarCorreo(request.Email, request.Nombre,request.Id,1);//Prueba pasoID
            
             return Ok(resultado);
         }
@@ -46,7 +53,7 @@ namespace ApiEnvioMasivo.Controllers
             var resultados = new List<object>();
             foreach (var d in destinatariosFiltrados)
             {
-                var resultado = await EnviarCorreo(d.Email, d.Nombre,1000,1000);//solo para pruebas, hay que modificarlo
+                var resultado = await EnviarCorreo(d.Email, d.Nombre,1000,1);//solo para pruebas, hay que modificarlo
                 resultados.Add(resultado);
             }
             return Ok(new
@@ -79,7 +86,7 @@ namespace ApiEnvioMasivo.Controllers
                 if (string.IsNullOrWhiteSpace(d.Email) || string.IsNullOrWhiteSpace(d.Nombre))
                     continue;
 
-               var resultado = await EnviarCorreo(d.Email, d.Nombre, d.Id,100);
+               var resultado = await EnviarCorreo(d.Email, d.Nombre, d.Id,1);
                 //var resultado =  await EnviarCorreoHtml(d.Email, Asunto, Html);
 
 
@@ -106,11 +113,12 @@ namespace ApiEnvioMasivo.Controllers
         }
 
         [HttpGet("probar-flujo")]
-        public async Task<IActionResult> EjecutarFlujoAhora([FromServices] FlujoRunnerService runner)
+        public async Task<IActionResult> EjecutarFlujoAhora([FromServices] IFlujoService runner)
         {
-            await runner.EjecutarFlujosAsync();
+            await runner.EjecutarFlujoAsync(1); 
             return Ok("✅ Flujo ejecutado manualmente");
         }
+
 
         [HttpGet("historial-flujos")]
         public async Task<IActionResult> VerHistorial([FromServices] AppDbContext db)
@@ -222,6 +230,44 @@ namespace ApiEnvioMasivo.Controllers
             });
         }
 
+
+        [HttpGet("probar-envio")]
+        public async Task<IActionResult> ProbarEnvio()
+        {
+            var html = @"
+        <html><body>
+        <h1>Hola Santi 👋</h1>
+        <p>Este es un test de Infobip.</p>
+        </body></html>";
+
+            var resultado = await _emailService.EnviarCorreoAsync("santiago.g.miranda2023@gmail.com", "Test desde API", html);
+
+            return Ok(resultado);
+        }
+
+        //[HttpGet("probar-flujo")]
+        //public async Task<IActionResult> ProbarFlujo()
+        //{
+        //    await _flujoService.EjecutarPasoAsync(1); // pasoId de prueba
+        //    return Ok("Paso ejecutado");
+        //}
+
+        [HttpGet("ejecutar-flujo")]
+        public async Task<IActionResult> EjecutarFlujo([FromQuery] int flujoId)
+        {
+            try
+            {
+                //await _flujoService.EjecutarFlujosAsync();
+                await _flujoService.EjecutarFlujoAsync(flujoId);
+                return Ok("Flujo ejecutado correctamente");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error al ejecutar flujo: {ex.Message}");
+            }
+        }
+
+
         //private async Task<object> EnviarCorreo(string email, string nombre)
         //{
         //    var client = new RestClient("https://kq8928.api.infobip.com");
@@ -325,6 +371,15 @@ namespace ApiEnvioMasivo.Controllers
 
                 var response = await client.ExecuteAsync(request);
 
+                if (response != null)
+                {
+                  
+                    await _log.GuardarLogAsync("INFOBIP", response != null
+                    ? JsonConvert.SerializeObject(response)
+    :               "Respuesta nula al intentar enviar correo.");
+
+                }
+
                 if (!response.IsSuccessful)
                 {
                     return new
@@ -356,6 +411,7 @@ namespace ApiEnvioMasivo.Controllers
                     Success = false,
                     Error = "Excepción: " + ex.Message
                 };
+
             }
         }
 

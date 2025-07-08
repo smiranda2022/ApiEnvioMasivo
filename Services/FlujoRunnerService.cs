@@ -11,15 +11,17 @@ using Microsoft.Extensions.Configuration;
 
 namespace ApiEnvioMasivo.Services
 {
-    public class FlujoRunnerService
+    public class FlujoRunnerService : IFlujoService
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _configuration;
+        private readonly MockEmailService _mockEmailService;
 
-        public FlujoRunnerService(AppDbContext db, IConfiguration configuration)
+        public FlujoRunnerService(AppDbContext db, IConfiguration configuration, MockEmailService mockEmailService)
         {
             _db = db;
             _configuration = configuration;
+            _mockEmailService = mockEmailService;
         }
 
         //public async Task EjecutarFlujosAsync()
@@ -165,7 +167,6 @@ namespace ApiEnvioMasivo.Services
                 }
             }
         }
-
         private async Task EnviarCorreoAsync(string email, string nombre, string asunto, string html)
         {
             // Aquí podrías reutilizar tu lógica de envío con Infobip
@@ -219,6 +220,107 @@ namespace ApiEnvioMasivo.Services
                 return new { Email = email, Success = false, Error = "Excepción: " + ex.Message };
             }
         }
+        public async Task<string> EjecutarFlujoAsync(int flujoId)
+        {
+            try
+            {
+                var flujo = await _db.Flujos
+                    .Include(f => f.Pasos)
+                    .FirstOrDefaultAsync(f => f.Id == flujoId);
+
+                if (flujo == null || flujo.Pasos == null || !flujo.Pasos.Any())
+                    return $"Flujo {flujoId} no encontrado o sin pasos.";
+
+                var destinatarios = await _db.Destinatarios.ToListAsync();
+                if (!destinatarios.Any())
+                    return "No hay destinatarios para ejecutar el flujo.";
+
+                foreach (var paso in flujo.Pasos.OrderBy(p => p.Orden))
+                {
+                    foreach (var destinatario in destinatarios)
+                    {
+                        // Enviar correo con HTML fijo (sin usar CuerpoHtml)
+                        await _mockEmailService.EnviarCorreoAsync(
+                            destinatario.Email,
+                            paso.Asunto,
+                            "<p>Correo de prueba: este es el paso del flujo.</p>");
+
+                        // Registrar en FlujoHistoriales
+                        var historial = new FlujoHistorial
+                        {
+                            DestinatarioId = destinatario.Id,
+                            FlujoId = flujo.Id,
+                            PasoId = paso.Id,
+                            FechaEnvio = DateTime.UtcNow,
+                            Abierto = false,
+                            HizoClic = false
+                        };
+
+                        _db.FlujoHistoriales.Add(historial);
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                return $"Flujo {flujoId} ejecutado correctamente para {destinatarios.Count} destinatarios.";
+            }
+            catch (Exception ex)
+            {
+                return $"Error al ejecutar flujo: {ex.InnerException?.Message ?? ex.Message}";
+            }
+        }
+
+
+        //public async Task<string> EjecutarFlujoAsync(int flujoId)
+        //{
+        //    var flujo = await _db.Flujos
+        //        .Include(f => f.Pasos)
+        //        .FirstOrDefaultAsync(f => f.Id == flujoId);
+
+        //    if (flujo == null || flujo.Pasos == null || !flujo.Pasos.Any())
+        //        return $"Flujo {flujoId} no encontrado o sin pasos.";
+
+        //    var destinatarios = await _db.Destinatarios.ToListAsync();
+        //    if (!destinatarios.Any())
+        //        return "No hay destinatarios para ejecutar el flujo.";
+
+        //    foreach (var paso in flujo.Pasos.OrderBy(p => p.Orden))
+        //    {
+        //        foreach (var destinatario in destinatarios)
+        //        {
+        //            // Acá iría el envío real o mock:
+        //            //await _mockEmailService.EnviarCorreoAsync(destinatario.Email, paso.Asunto, paso.CuerpoHtml);
+        //            await _mockEmailService.EnviarCorreoAsync(destinatario.Email, paso.Asunto, "<p>Este es un correo de prueba</p>");
+
+
+        //            // Registrar en FlujoHistoriales:
+        //            var historial = new FlujoHistorial
+        //            {
+        //                DestinatarioId = destinatario.Id,
+        //                FlujoId = flujo.Id,
+        //                PasoId = paso.Id,
+        //                FechaEnvio = DateTime.UtcNow,
+        //                Abierto = false,
+        //                HizoClic = false
+        //            };
+
+        //            _db.FlujoHistoriales.Add(historial);
+
+        //        }
+        //    }
+
+        //    await _db.SaveChangesAsync();
+        //    return $"Flujo {flujoId} ejecutado correctamente para {destinatarios.Count} destinatarios.";
+        //}
+
+
+        public async Task EjecutarTodosLosFlujosAsync()
+        {
+            // Lógica para ejecutar todos los flujos
+            await Task.CompletedTask;
+        }
+
+
+
 
     }
 }

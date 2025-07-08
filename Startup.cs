@@ -6,10 +6,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
 using ApiEnvioMasivo.Data;
-using ApiEnvioMasivo.Seed;
 using ApiEnvioMasivo.Services;
 using Hangfire;
 using ApiEnvioMasivo.Filters;
+
 
 
 namespace ApiEnvioMasivo
@@ -17,6 +17,7 @@ namespace ApiEnvioMasivo
     public class Startup
     {
         public IConfiguration Configuration { get; }
+
 
         public Startup(IConfiguration configuration)
         {
@@ -27,6 +28,20 @@ namespace ApiEnvioMasivo
 
         public void ConfigureServices(IServiceCollection services)
         {
+           
+            services.AddHttpClient();
+
+            var modoCorreo = Configuration["ModoCorreo"];
+
+            if (modoCorreo == "infobip")
+            {
+                services.AddScoped<IEmailService, InfobipEmailService>();
+            }
+            else
+            {
+                services.AddScoped<IEmailService, MockEmailService>();
+            }
+
             services.AddControllers();
 
             services.AddDbContext<AppDbContext>(options =>
@@ -49,16 +64,20 @@ namespace ApiEnvioMasivo
             services.AddHangfireServer();
             // Esto es una prueba para disparar un deploy automático
 
+            services.AddScoped<LogService>();
+
+            services.AddScoped<IFlujoService, FlujoRunnerService>();
+
+            services.AddScoped<MockEmailService>();
+
+
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseDeveloperExceptionPage(); // habilita trazas detalladas
 
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+   
 
             app.UseHttpsRedirection(); // Redirección a HTTPS
 
@@ -83,11 +102,18 @@ namespace ApiEnvioMasivo
                 });
             });
 
-            using (var scope = app.ApplicationServices.CreateScope())
-            {
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                FlujoSeeder.CargarFlujoDeEjemplo(db);
-            }
+            //using (var scope = app.ApplicationServices.CreateScope())
+            //{
+            //    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            //    FlujoSeeder.CargarFlujoDeEjemplo(db);
+            //}
+
+            // 🔁 Ejecutar flujos automáticamente cada 5 minutos
+            //RecurringJob.AddOrUpdate<IFlujoService>(
+            //    "ejecutar-flujos-recurrente",
+            //    x => x.EjecutarTodosLosFlujosAsync(),
+            //    "*/5 * * * *"
+            //);
         }
 
     }

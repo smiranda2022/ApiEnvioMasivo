@@ -25,5 +25,10 @@ namespace ApiEnvioMasivo.Models
         public string CondicionValor { get; set; }
 
         public bool Activo { get; set; }
+
+       
+
+       
+
     }
 }

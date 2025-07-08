@@ -4,14 +4,16 @@ using ApiEnvioMasivo.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace ApiEnvioMasivo.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250618014606_AddLogTable")]
+    partial class AddLogTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,9 +135,6 @@ namespace ApiEnvioMasivo.Migrations
                     b.Property<int>("FlujoId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("FlujoPasoId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("HizoClic")
                         .HasColumnType("bit");
 
@@ -146,11 +145,7 @@ namespace ApiEnvioMasivo.Migrations
 
                     b.HasIndex("DestinatarioId");
 
-                    b.HasIndex("FlujoId");
-
-                    b.HasIndex("FlujoPasoId");
-
-                    b.ToTable("FlujoHistorial");
+                    b.ToTable("FlujoHistoriales");
                 });
 
             modelBuilder.Entity("ApiEnvioMasivo.Models.FlujoPaso", b =>
@@ -192,27 +187,6 @@ namespace ApiEnvioMasivo.Migrations
                     b.HasIndex("FlujoId");
 
                     b.ToTable("FlujoPasos");
-                });
-
-            modelBuilder.Entity("ApiEnvioMasivo.Models.Log", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<string>("Contenido")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("Fecha")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Tipo")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Logs");
                 });
 
             modelBuilder.Entity("ApiEnvioMasivo.Models.SuscripcionRequest", b =>
@@ -271,21 +245,7 @@ namespace ApiEnvioMasivo.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ApiEnvioMasivo.Models.Flujo", "Flujo")
-                        .WithMany()
-                        .HasForeignKey("FlujoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ApiEnvioMasivo.Models.FlujoPaso", "FlujoPaso")
-                        .WithMany()
-                        .HasForeignKey("FlujoPasoId");
-
                     b.Navigation("Destinatario");
-
-                    b.Navigation("Flujo");
-
-                    b.Navigation("FlujoPaso");
                 });
 
             modelBuilder.Entity("ApiEnvioMasivo.Models.FlujoPaso", b =>

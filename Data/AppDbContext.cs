@@ -1,16 +1,19 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ApiEnvioMasivo.Models;
+using Hangfire.Logging;
 
 namespace ApiEnvioMasivo.Data
 {
     public class AppDbContext : DbContext
     {
         public AppDbContext(DbContextOptions options) : base(options) { }
+        public DbSet<Log> Logs { get; set; }
 
         public DbSet<Destinatario> Destinatarios { get; set; }
         public DbSet<Flujo> Flujos { get; set; }
         public DbSet<FlujoPaso> FlujoPasos { get; set; }
         public DbSet<FlujoHistorial> FlujoHistoriales { get; set; }
+      
 
         public DbSet<CorreoEnviado> CorreosEnviados { get; set; }
 
@@ -35,6 +38,6 @@ namespace ApiEnvioMasivo.Data
                 .WithMany()
                 .HasForeignKey(e => e.DestinatarioId);
         }
-
+        
     }
 }
