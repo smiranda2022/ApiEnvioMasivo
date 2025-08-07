@@ -56,6 +56,20 @@ namespace ApiEnvioMasivo.Controllers
             return File(pixel, "image/gif");
         }
 
+        [HttpGet("click")]
+        public async Task<IActionResult> RegistrarClick([FromQuery] int correoId, [FromQuery] string url)
+        {
+            var correo = await _db.CorreosEnviados.FirstOrDefaultAsync(c => c.Id == correoId);
+
+            if (correo == null)
+                return NotFound("Correo no encontrado");
+
+            correo.HizoClic = true;
+            await _db.SaveChangesAsync();
+
+            // Redirigir al destino original
+            return Redirect(url);
+        }
 
 
     }

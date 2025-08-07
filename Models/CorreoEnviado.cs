@@ -18,7 +18,10 @@ namespace ApiEnvioMasivo.Models
          public DateTime? FechaApertura { get; set; }
         public FlujoPaso Paso { get; set; }
 
-       
+        public bool HizoClic { get; set; }  // para tracking de clics
+        public bool Rebotado { get; set; }  // para rebotes
+
+
 
     }
 }

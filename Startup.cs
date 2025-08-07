@@ -70,6 +70,8 @@ namespace ApiEnvioMasivo
 
             services.AddScoped<MockEmailService>();
 
+            services.AddScoped<CorreoService>();
+            services.AddScoped<IFlujoService, FlujoRunnerService>();
 
         }
 

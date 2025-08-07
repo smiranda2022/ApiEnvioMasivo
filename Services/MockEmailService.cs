@@ -25,13 +25,10 @@ namespace ApiEnvioMasivo.Services
             _log = log;
             _db = db;
         }
-
         public async Task<string> EnviarCorreoAsync(string to, string subject, string html)
         {
-            // Simula un retardo como si se estuviera enviando
-            await Task.Delay(500);
+            await Task.Delay(500); // Simula envío
 
-            // Construye una respuesta simulada
             var fakeResponse = new
             {
                 Simulado = true,
@@ -41,23 +38,30 @@ namespace ApiEnvioMasivo.Services
                 Fecha = DateTime.UtcNow
             };
 
-            // Guarda el log en la base
             await _log.GuardarLogAsync("MOCK_EMAIL", JsonConvert.SerializeObject(fakeResponse));
 
-            // Guarda también en la tabla CorreosEnviados
-            var correo = new CorreoEnviado
-            {
-                DestinatarioId = 7,  // solo para pruba
-                FlujoPasoId = 1,
-                FechaEnvio = DateTime.UtcNow,
-                Abierto = false
-            };
+            // Buscar destinatario real
+            var destinatario = await _db.Destinatarios.FirstOrDefaultAsync(d => d.Email == to);
+            var paso = await _db.FlujoPasos.FirstOrDefaultAsync(); // Esto podrías mejorar
 
-            _db.CorreosEnviados.Add(correo);
-            await _db.SaveChangesAsync();
+            if (destinatario != null && paso != null)
+            {
+                var correo = new CorreoEnviado
+                {
+                    DestinatarioId = destinatario.Id,
+                    FlujoPasoId = paso.Id,
+                    FechaEnvio = DateTime.UtcNow,
+                    Abierto = false
+                };
+
+                _db.CorreosEnviados.Add(correo);
+                await _db.SaveChangesAsync();
+            }
 
             return "Simulado correctamente";
         }
+
+
     }
 
 }

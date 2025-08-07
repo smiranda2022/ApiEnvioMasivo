@@ -13,5 +13,10 @@ namespace ApiEnvioMasivo.Models
         public DateTime FechaCreacion { get; set; }
 
         public ICollection<FlujoPaso> Pasos { get; set; }
+
+        public DateTime? FechaProgramada { get; set; }
+
+        public string HtmlContenido { get; set; }
+
     }
 }

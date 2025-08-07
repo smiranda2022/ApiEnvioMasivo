@@ -13,6 +13,8 @@ using ApiEnvioMasivo.Data;
 using Microsoft.EntityFrameworkCore;
 using ApiEnvioMasivo.Services;
 using Newtonsoft.Json;
+using Hangfire;
+using Microsoft.Extensions.Configuration;
 
 namespace ApiEnvioMasivo.Controllers
 {
@@ -24,13 +26,16 @@ namespace ApiEnvioMasivo.Controllers
         private readonly LogService _log;
         private readonly IEmailService _emailService;
         private readonly IFlujoService _flujoService;
+        private readonly IConfiguration _config;
 
-        public EnvioMasivoController(AppDbContext db, LogService log, IEmailService emailService,IFlujoService flujoService)
+        public EnvioMasivoController(AppDbContext db, LogService log, IEmailService emailService,IFlujoService flujoService,
+        IConfiguration confi)
         {
             _db = db;
             _log = log;
             _emailService = emailService;
             _flujoService = flujoService;
+            _config = confi;
         }
 
         [HttpPost]
@@ -67,6 +72,38 @@ namespace ApiEnvioMasivo.Controllers
         public async Task<IActionResult> EnviarDesdeBaseDeDatos([FromBody] SegmentacionModel filtros, [FromServices] AppDbContext db)
         {
             var query = db.Destinatarios.AsQueryable();
+
+            var flujo = new Flujo();
+            flujo.FechaProgramada = filtros.FechaProgramada;
+
+            await _db.Flujos.AddAsync(flujo);
+            await _db.SaveChangesAsync();
+
+            if (flujo.FechaProgramada.HasValue && flujo.FechaProgramada > DateTime.Now)
+            {
+                // Si hay una fecha futura, se programa con Hangfire
+                BackgroundJob.Schedule<IFlujoService>(
+                    x => x.EjecutarFlujoAsync(flujo.Id),
+                    flujo.FechaProgramada.Value - DateTime.Now
+                );
+
+                return Ok(new
+                {
+                    Mensaje = $"✅ Flujo programado para {flujo.FechaProgramada.Value}.",
+                    flujo.Id
+                });
+            }
+            else
+            {
+                // Si no hay fecha, se ejecuta ahora mismo
+                await _flujoService.EjecutarFlujoAsync(flujo.Id);
+
+                return Ok(new
+                {
+                    Mensaje = "✅ Flujo ejecutado inmediatamente.",
+                    flujo.Id
+                });
+            }
 
             if (filtros.Edad.HasValue)
                 query = query.Where(d => d.Edad == filtros.Edad.Value);
@@ -319,7 +356,6 @@ namespace ApiEnvioMasivo.Controllers
 
         private async Task<object> EnviarCorreo(string email, string nombre, int DestinatarioId, int pasoId)
         {
-            
             var enviado = new CorreoEnviado
             {
                 DestinatarioId = DestinatarioId,
@@ -328,9 +364,13 @@ namespace ApiEnvioMasivo.Controllers
                 Abierto = false
             };
             _db.CorreosEnviados.Add(enviado);
-            await _db.SaveChangesAsync();     // ← aquí debería persistir
+            await _db.SaveChangesAsync();
 
-            // Validación simple de entrada
+            int correoId = enviado.Id;
+
+            // Leer la URL base desde appsettings.json
+            string trackingBaseUrl = _config["TrackingBaseUrl"]?.TrimEnd('/') ?? "https://localhost:5001";
+
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(nombre))
             {
                 return new
@@ -356,16 +396,22 @@ namespace ApiEnvioMasivo.Controllers
                 request.AddParameter("to", $"{{\"to\":\"{email}\",\"placeholders\":{{\"firstName\":\"{nombre}\"}}}}");
 
                 var htmlBody = $@"
-         <html>
-         <body style='font-family: Arial;'>
-             <h2 style='color:#2E86C1;'>¡Gracias por unirte a Mi Felicidad Mascotas!</h2>
-             <p>Hola {nombre},</p>
-             <p>Muy pronto vas a recibir consejos, novedades y beneficios para vos y tu mascota 🐶🐱.</p>
-             <a href='https://mifelicidadmascotas.com' style='background-color:#2E86C1;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;'>Visitar el sitio</a>
-             <img src='https://localhost:5001/api/tracking/open?correoId=123' width='1' height='1' style='display:none;' />
+        <html>
+            <body style='font-family: Arial;'>
+                <h2 style='color:#2E86C1;'>¡Gracias por unirte a Mi Felicidad Mascotas!</h2>
+                <p>Hola {nombre},</p>
+                <p>Muy pronto vas a recibir consejos, novedades y beneficios para vos y tu mascota 🐶🐱.</p>
 
-        </body>
-         </html>";
+                <!-- Enlace con tracking de clics -->
+                <a href='{trackingBaseUrl}/api/tracking/click?correoId={correoId}&url=https://mifelicidadmascotas.com'
+                   style='background-color:#2E86C1;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;'>
+                   Visitar el sitio
+                </a>
+
+                <!-- Pixel de apertura -->
+                <img src='{trackingBaseUrl}/api/tracking/open?correoId={correoId}' width='1' height='1' style='display:none;' />
+            </body>
+        </html>";
 
                 request.AddParameter("html", htmlBody);
 
@@ -373,11 +419,7 @@ namespace ApiEnvioMasivo.Controllers
 
                 if (response != null)
                 {
-                  
-                    await _log.GuardarLogAsync("INFOBIP", response != null
-                    ? JsonConvert.SerializeObject(response)
-    :               "Respuesta nula al intentar enviar correo.");
-
+                    await _log.GuardarLogAsync("INFOBIP", JsonConvert.SerializeObject(response));
                 }
 
                 if (!response.IsSuccessful)
@@ -411,9 +453,9 @@ namespace ApiEnvioMasivo.Controllers
                     Success = false,
                     Error = "Excepción: " + ex.Message
                 };
-
             }
         }
+
 
         private async Task<object> EnviarCorreoHtml(string email, string asunto, string htmlContenido)
         {
@@ -461,6 +503,40 @@ namespace ApiEnvioMasivo.Controllers
             {
                 return new { Email = email, Success = false, Error = "Excepción: " + ex.Message };
             }
+        }
+
+
+        [HttpGet("estadisticas")]
+        public async Task<IActionResult> ObtenerEstadisticas([FromQuery] int flujoId)
+        {
+            var enviados = await _db.CorreosEnviados
+                .Where(c => c.FlujoPaso.FlujoId == flujoId)
+                .ToListAsync();
+
+            if (!enviados.Any())
+                return NotFound($"No hay correos enviados para el flujo {flujoId}");
+
+            var totalEnviados = enviados.Count;
+            var totalAbiertos = enviados.Count(c => c.Abierto);
+            var porcentajeApertura = totalEnviados > 0 ? (totalAbiertos * 100 / totalEnviados) : 0;
+
+            // Cuando implementemos tracking de clicks
+            var totalClicks = enviados.Count(c => c.HizoClic);
+            var porcentajeClicks = totalEnviados > 0 ? (totalClicks * 100 / totalEnviados) : 0;
+
+            // Rebotes (en el futuro con Infobip real)
+            var rebotes = enviados.Count(c => c.Rebotado);
+
+            return Ok(new
+            {
+                FlujoId = flujoId,
+                TotalEnviados = totalEnviados,
+                TotalAbiertos = totalAbiertos,
+                PorcentajeApertura = porcentajeApertura,
+                TotalClicks = totalClicks,
+                PorcentajeClicks = porcentajeClicks,
+                Rebotes = rebotes
+            });
         }
 
     }

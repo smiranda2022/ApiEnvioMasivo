@@ -35,21 +35,6 @@ namespace ApiEnvioMasivo.Migrations
                 table: "FlujoHistorial",
                 column: "Id");
 
-            migrationBuilder.CreateTable(
-                name: "Logs",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Fecha = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Tipo = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Contenido = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Logs", x => x.Id);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_FlujoHistorial_FlujoId",
                 table: "FlujoHistorial",

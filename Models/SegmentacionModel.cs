@@ -11,6 +11,7 @@ namespace ApiEnvioMasivo.Models
         public int? Edad { get; set; }
         public string Genero { get; set; }
         public string Ubicacion { get; set; }
+        public DateTime? FechaProgramada { get; set; }
     }
 
 

@@ -16,12 +16,14 @@ namespace ApiEnvioMasivo.Services
         private readonly AppDbContext _db;
         private readonly IConfiguration _configuration;
         private readonly MockEmailService _mockEmailService;
+        private readonly CorreoService _correoService;
 
-        public FlujoRunnerService(AppDbContext db, IConfiguration configuration, MockEmailService mockEmailService)
+        public FlujoRunnerService(AppDbContext db, IConfiguration configuration, MockEmailService mockEmailService, CorreoService correoService)
         {
             _db = db;
             _configuration = configuration;
             _mockEmailService = mockEmailService;
+            _correoService = correoService;
         }
 
         //public async Task EjecutarFlujosAsync()
@@ -239,14 +241,17 @@ namespace ApiEnvioMasivo.Services
                 {
                     foreach (var destinatario in destinatarios)
                     {
-                        // Enviar correo con HTML fijo (sin usar CuerpoHtml)
-                        await _mockEmailService.EnviarCorreoAsync(
-                            destinatario.Email,
-                            paso.Asunto,
-                            "<p>Correo de prueba: este es el paso del flujo.</p>");
+                        var htmlConNombre = flujo.HtmlContenido?.Replace("{{Nombre}}", destinatario.Nombre ?? ""); // Campo personalizado
 
-                        // Registrar en FlujoHistoriales
-                        var historial = new FlujoHistorial
+                        await _correoService.EnviarCorreo(
+                            destinatario.Email,
+                            destinatario.Nombre,
+                            destinatario.Id,
+                            paso.Id,
+                            paso.Asunto,
+                            htmlConNombre ?? "<p>Sin contenido</p>");
+
+                        _db.FlujoHistoriales.Add(new FlujoHistorial
                         {
                             DestinatarioId = destinatario.Id,
                             FlujoId = flujo.Id,
@@ -254,9 +259,7 @@ namespace ApiEnvioMasivo.Services
                             FechaEnvio = DateTime.UtcNow,
                             Abierto = false,
                             HizoClic = false
-                        };
-
-                        _db.FlujoHistoriales.Add(historial);
+                        });
                     }
                 }
 

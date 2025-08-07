@@ -4,14 +4,16 @@ using ApiEnvioMasivo.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace ApiEnvioMasivo.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250726135710_AgregarHtmlContenidoEnFlujo")]
+    partial class AgregarHtmlContenidoEnFlujo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,14 +43,8 @@ namespace ApiEnvioMasivo.Migrations
                     b.Property<int>("FlujoPasoId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("HizoClic")
-                        .HasColumnType("bit");
-
                     b.Property<int?>("PasoId")
                         .HasColumnType("int");
-
-                    b.Property<bool>("Rebotado")
-                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
